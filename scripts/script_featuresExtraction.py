@@ -128,7 +128,7 @@ for id in idUnique: # iterate over unique ids
     if saveFeatures:
         pickle.dump([id, featN], fid)
 
-    if display: # do not save features if not displaying them in order to save internal memory
+    if display: # do not save features if not displaying them in order to save internal memory usage
         # save features vector
         featDict[id] = featN
 

@@ -20,7 +20,7 @@ import pickle
 # featuresFile = r'../Results/script_featuresExtraction/features_3_examples.p'
 featuresFile = r'../Results/script_featuresExtraction/features_All_examples.p'
 resultsDir = '../Results/script_calcSavePCA'
-NMaxIds = 100 # maximum number of ids to load
+NMaxIds = 100 # maximum number of ids to load, if None - all ids will be used
 NComponentsPCA = 4096 # number of pca compnents
 
 os.makedirs(resultsDir, exist_ok=True) # create results dir if not exist
@@ -65,6 +65,7 @@ print('done')
 # ------------ Split to Train and Validation Sets ------------
 
 # TODO: add excluded classes to train set
+# FIXME: ValueError: The test_size = 2725 should be greater or equal to the number of classes = 2931
 
 print('spliting data to train and val ...')
 
