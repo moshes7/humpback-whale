@@ -20,6 +20,8 @@ from PIL import Image
 from sklearn.decomposition import PCA
 import pickle
 
+# TODO: should include class label 'new_whale'
+
 # ------------ parameters ------------
 dataDir = r'C:\Users\Moshe\Sync\Data\humpback-whale\train'
 labelsFile = r'C:\Users\Moshe\Sync\Data\humpback-whale\train.csv'

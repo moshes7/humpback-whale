@@ -14,10 +14,13 @@ from sklearn.decomposition import PCA
 from sklearn import model_selection
 import pickle
 
+# TODO: add excluded classes to train set
+
 # ------------ parameters ------------
 # featuresFile = r'../Results/script_featuresExtraction/features_3_examples.p'
 featuresFile = r'../Results/script_featuresExtraction/features_All_examples.p'
-resultsDir = '../Results/script_clusterByTrainFeatrues'
+resultsDir = '../Results/script_calcSavePCA'
+NMaxIds = 100 # maximum number of ids to load
 NComponentsPCA = 4096 # number of pca compnents
 
 os.makedirs(resultsDir, exist_ok=True) # create results dir if not exist
@@ -35,6 +38,8 @@ with open(featuresFile, 'rb') as fid:
             featsList.append(feats)
             counter += 1
             print('reading features {}'.format(counter))
+            if (NMaxIds is not None) and (counter >= NMaxIds):
+                break
     except EOFError:
         pass
 
@@ -59,9 +64,29 @@ print('done')
 
 # ------------ Split to Train and Validation Sets ------------
 
+# TODO: add excluded classes to train set
+
 print('spliting data to train and val ...')
+
+# find classes with only 1 example and exclude them from split - since StratifiedShuffleSplit cannot work with them
+y = ids
+classes, y_indices = np.unique(y, return_inverse=True)
+class_counts = np.bincount(y_indices)
+indLargeClasses = np.where(class_counts > 1) # classes with more than one example per class
+indSmallClasses = np.where(class_counts == 1) # classes with one example per class
+largeClasses = classes[indLargeClasses]
+indFeatToSplit = np.isin(ids, largeClasses)
+
+feats = feats[indFeatToSplit]
+ids = ids[indFeatToSplit]
+
+# get split
 sss = model_selection.StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 trainInd, valInd = next(sss.split(X=feats, y=ids))
+
+# add indices of small classes to trainInt
+# TODO: add excluded classes to train set
+
 print('done')
 
 # ------------ PCA ------------
@@ -83,7 +108,7 @@ print('done')
 
 # save pca
 print('saving pca data ...')
-fileName = os.path.join(resultsDir, 'pca_{}_components.p'.format(valPCA.shape[-1]))
+fileName = os.path.join(resultsDir, 'pca_{}_trainExamples_{}_components.p'.format(trainPCA.shape[0], trainPCA.shape[-1]))
 with open(fileName, 'wb') as fid:
     pickle.dump([pca, trainPCA, valPCA, trainInd, valInd], fid)
 print('done')
