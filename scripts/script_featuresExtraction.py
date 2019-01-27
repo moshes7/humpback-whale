@@ -18,13 +18,18 @@ import matplotlib.cm as cm
 import os
 from PIL import Image
 from sklearn.decomposition import PCA
+import pickle
 
 # ------------ parameters ------------
 dataDir = r'C:\Users\Moshe\Sync\Data\humpback-whale\train'
 labelsFile = r'C:\Users\Moshe\Sync\Data\humpback-whale\train.csv'
 resultsDir = '../Results/script_featuresExtraction'
 # idsToCheck = ['w_f48451c', 'w_c3d896a', 'w_20df2c5', 'w_dd88965', 'w_64404ac'] # None
-idsToCheck = ['w_f48451c', 'w_20df2c5', 'w_dd88965'] # None
+# idsToCheck = ['w_f48451c', 'w_20df2c5', 'w_dd88965'] # None
+idsToCheck = None
+sfx =  '_All_examples'# ''
+saveFeatures = True # if True features will be saved to file
+display = False
 
 os.makedirs(resultsDir, exist_ok=True) # create results dir if not exist
 
@@ -59,24 +64,31 @@ load_img = utils.LoadImage(space='L') # image loading function. space='L' - conv
 tf_img = utils.TransformImage(model) # image pre-processing function: transformations depending on the model rescale, center crop, normalize, and others (ex: ToBGR, ToRange255)
 
 # ------------ extract features ------------
-featDict = {}
 
-for id in idUnique:
+if saveFeatures:
+    featFileName = 'features{}.p'.format(sfx)
+    fid = open(os.path.join(resultsDir, featFileName), 'wb')
+
+featDict = {}
+counter = 0
+for id in idUnique: # iterate over unique ids
+
+    counter += 1
+    print('extracting features of id {}: {}/{}'.format(id ,counter, len(idUnique)))
 
     # find all images with this id
     idsCurrent = df.loc[df['Id'] == id]
     imageList = idsCurrent['Image'].tolist()
 
-    idStr = str(id)
-    featDict[idStr] = []
-
-    for imageName in imageList:
+    featList = []
+    idList = []
+    for imageName in imageList: # iterate over all examples with the same id
 
         # load image
         imgFile = os.path.join(dataDir, imageName)
         img = load_img(imgFile) # grayscale image
 
-        # duplicate img to create 3 color channels
+        # duplicate graysacle img to create 3 color channels
         imgN = np.array(img)
         imgN = np.stack([img, img ,img], axis=-1)
         img = Image.fromarray(imgN)
@@ -104,63 +116,79 @@ for id in idUnique:
         else:
             feat = output_features.detach().numpy()
 
-        # save features vector
-        featDict[idStr].append(feat.squeeze())
+        featList.append(feat.squeeze())
+        idList.append(id)
 
-
-# convert list to ndarrays
-featsList = []
-idsList = []
-for id, feat in featDict.items():
-    featN = np.asarray(feat) # convert list to ndarray
+    # convert list to ndarray
+    featN = np.asarray(featList) # convert list to ndarray
     featN = np.reshape(featN, (featN.shape[0],-1)) # reshape to 1 feature vector per img
-    featsList.append(featN)
-    idsList.append(np.repeat(id, featN.shape[0]))
 
-# flatten lists
-featsList = [item for sublist in featsList for item in sublist]
-idsList = [item for sublist in idsList for item in sublist]
+    if saveFeatures:
+        pickle.dump([id, featN], fid)
 
-# convert list to ndarrays
-feats = np.asarray(featsList)
-ids = np.asarray(idsList)
+    if display: # do not save features if not displaying them in order to save internal memory
+        # save features vector
+        featDict[id] = featN
 
-# get 2 principle components using PCA
-pca = PCA(n_components=2)
-principalComponents = pca.fit_transform(feats)
+# close features file
+if saveFeatures:
+    fid.close()
 
-# TODO: use 3 components - should use 3D scatterplot, see: https://matplotlib.org/gallery/mplot3d/scatter3d.html
-# TODO: add tSNE visualization
+if display:
 
-# display
-fontSize = 20
-fig = plt.figure(figsize=(8, 8))
-ax = fig.add_subplot(1, 1, 1)
-ax.set_xlabel('Principal Component 1', fontsize=fontSize)
-ax.set_ylabel('Principal Component 2', fontsize=fontSize)
-strTitle = '2 Components PCA'
-ax.set_title(strTitle, fontsize=fontSize)
+    # some processing before PCA - all features should be located in one array
 
-colors = cm.rainbow(np.linspace(0, 1, len(idUnique)))
+    # convert dict of lists to list of lists
+    featsList = []
+    idsList = []
+    for id, feat in featDict.items():
+        featsList.append(feat)
+        idsList.append(np.repeat(id, feat.shape[0]))
 
-for n, id in enumerate(idUnique):
-    ind = np.where(ids == id)[0]
-    x = principalComponents[ind, 0]
-    y = principalComponents[ind, 1]
-    ax.scatter(x, y, c=colors[n, 0:3], s=50)
+    # flatten lists
+    featsList = [item for sublist in featsList for item in sublist]
+    idsList = [item for sublist in idsList for item in sublist]
 
-ax.legend(idUnique, fontsize=fontSize)
-ax.grid()
-plt.show(block=False); plt.pause(1e-2)
+    # convert lists to ndarrays
+    feats = np.asarray(featsList)
+    ids = np.asarray(idsList)
 
-# enlarge figure
-try:
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
-    plt.pause(1e-2)
-except:
-    pass
+    # get 2 principle components using PCA
+    pca = PCA(n_components=2)
+    principalComponents = pca.fit_transform(feats)
 
-plt.savefig(os.path.join(resultsDir, '{}.jpg'.format(strTitle)), bbox_inches='tight')
+    # TODO: use 3 components - should use 3D scatterplot, see: https://matplotlib.org/gallery/mplot3d/scatter3d.html
+    # TODO: add tSNE visualization
+
+    # display
+    fontSize = 20
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Principal Component 1', fontsize=fontSize)
+    ax.set_ylabel('Principal Component 2', fontsize=fontSize)
+    strTitle = '2 Components PCA{}'.format(sfx)
+    ax.set_title(strTitle, fontsize=fontSize)
+
+    colors = cm.rainbow(np.linspace(0, 1, len(idUnique)))
+
+    for n, id in enumerate(idUnique):
+        ind = np.where(ids == id)[0]
+        x = principalComponents[ind, 0]
+        y = principalComponents[ind, 1]
+        ax.scatter(x, y, c=colors[n, 0:3], s=50)
+
+    ax.legend(idUnique, fontsize=fontSize)
+    ax.grid()
+    plt.show(block=False); plt.pause(1e-2)
+
+    # enlarge figure
+    try:
+        mng = plt.get_current_fig_manager()
+        mng.window.showMaximized()
+        plt.pause(1e-2)
+    except:
+        pass
+
+    plt.savefig(os.path.join(resultsDir, '{}.jpg'.format(strTitle)), bbox_inches='tight')
 
 print('Done!')
