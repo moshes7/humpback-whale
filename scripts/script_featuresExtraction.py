@@ -29,8 +29,9 @@ resultsDir = '../Results/script_featuresExtraction'
 # idsToCheck = ['w_f48451c', 'w_c3d896a', 'w_20df2c5', 'w_dd88965', 'w_64404ac'] # None
 # idsToCheck = ['w_f48451c', 'w_20df2c5', 'w_dd88965'] # None
 idsToCheck = None
-sfx =  '_All_examples'# ''
+sfx =  '_new_whale_examples'# ''
 saveFeatures = True # if True features will be saved to file
+newWhaleOnly = True
 display = False
 
 os.makedirs(resultsDir, exist_ok=True) # create results dir if not exist
@@ -41,9 +42,13 @@ os.makedirs(resultsDir, exist_ok=True) # create results dir if not exist
 df = pd.read_csv(labelsFile)
 print(df.info())
 
-# delete rows with 'new_whale' id
-df = df.loc[df['Id'] != 'new_whale']
-print(df.info())
+if newWhaleOnly:
+    # delete rows without 'new_whale' id
+    df = df.loc[df['Id'] == 'new_whale']
+else:
+    # delete rows with 'new_whale' id
+    df = df.loc[df['Id'] != 'new_whale']
+# print(df.info())
 
 # find unique ids
 idUnique = df['Id'].unique().tolist()
@@ -56,6 +61,7 @@ if idsToCheck is not None:
 
 # setting device on GPU if available, else CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print('using {}'.format(device))
 
 # load Xception model pre-trained on imagenet
 model = pretrainedmodels.models.xception(num_classes=1000, pretrained='imagenet').to(device)
@@ -144,12 +150,12 @@ if display:
     featsList = []
     idsList = []
     for id, feat in featDict.items():
-        featsList.append(feat)
-        idsList.append(np.repeat(id, feat.shape[0]))
+        featsList.extend(feat)
+        idsList.extend(np.repeat(id, feat.shape[0]))
 
     # flatten lists
-    featsList = [item for sublist in featsList for item in sublist]
-    idsList = [item for sublist in idsList for item in sublist]
+    # featsList = [item for sublist in featsList for item in sublist]
+    # idsList = [item for sublist in idsList for item in sublist]
 
     # convert lists to ndarrays
     feats = np.asarray(featsList)
