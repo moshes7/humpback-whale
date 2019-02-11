@@ -29,7 +29,8 @@ resultsDir = '../Results/script_featuresExtraction'
 # idsToCheck = ['w_f48451c', 'w_c3d896a', 'w_20df2c5', 'w_dd88965', 'w_64404ac'] # None
 # idsToCheck = ['w_f48451c', 'w_20df2c5', 'w_dd88965'] # None
 idsToCheck = None
-sfx =  '_new_whale_examples'# ''
+# sfx =  '_without_new_whale'
+sfx =  '_new_whale_examples'#
 saveFeatures = True # if True features will be saved to file
 newWhaleOnly = True
 display = False
@@ -78,11 +79,12 @@ if saveFeatures:
     fid = open(os.path.join(resultsDir, featFileName), 'wb')
 
 featDict = {}
-counter = 0
+counter1 = 0
+counter2 = 0
 for id in idUnique: # iterate over unique ids
 
-    counter += 1
-    print('extracting features of id {}: {}/{}'.format(id ,counter, len(idUnique)))
+    counter1 += 1
+    print('extracting features of id {}: {}/{}'.format(id ,counter1, len(idUnique)))
 
     # find all images with this id
     idsCurrent = df.loc[df['Id'] == id]
@@ -91,6 +93,10 @@ for id in idUnique: # iterate over unique ids
     featList = []
     idList = []
     for imageName in imageList: # iterate over all examples with the same id
+
+        counter2 += 1
+        if counter2 % 10 == 0:
+            print('image {}/{}'.format(counter2, len(imageList)))
 
         # load image
         imgFile = os.path.join(dataDir, imageName)
@@ -126,6 +132,22 @@ for id in idUnique: # iterate over unique ids
 
         featList.append(feat.squeeze())
         idList.append(id)
+
+        # for new_whale class - periodically save features, in order to avoid OOM
+        if (counter2 % 100)==0 and newWhaleOnly and saveFeatures:
+
+            # convert list to ndarray
+            featN = np.asarray(featList)  # convert list to ndarray
+            featN = np.reshape(featN, (featN.shape[0], -1))  # reshape to 1 feature vector per img
+
+            # save features
+            print('saving features ...')
+            pickle.dump([id, featN], fid)
+            print('done')
+
+            # restart lists
+            featList = []
+            idList = []
 
     # convert list to ndarray
     featN = np.asarray(featList) # convert list to ndarray
