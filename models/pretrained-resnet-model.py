@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 # -*- coding: utf-8 -*-
 """init.ipynb
 
@@ -15,6 +17,9 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 resnet152 = resnet152.to(device)
 
 # Testing Inference
-a = torch.rand(256,3,224,224).to(device)
+batch_size = 64 # 256 # use smaller value if you get OOM error
+a = torch.rand(batch_size,3,224,224).to(device)
 with torch.no_grad():
-  resnet152(a)
+  b = resnet152(a)
+
+print('Done!')

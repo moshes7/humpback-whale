@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 # -*- coding: utf-8 -*-
 """pretrained-Xception.ipynb
 
@@ -205,14 +207,18 @@ def xception(pretrained=False,**kwargs):
 
       return model
 
-# Building the model & assigning to device
-model = xception(pretrained = True, num_classes = 300)
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
-model = model.to(device)
 
-# Testing Inference
-a = torch.rand(32,3,299,299)
-a = a.to(device)
-with torch.no_grad():
-  model(a)
+if __name__ == '__main__':
+    # Building the model & assigning to device
+    model = xception(pretrained = True, num_classes = 300)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
+    model = model.to(device)
+
+    # Testing Inference
+    a = torch.rand(32,3,299,299)
+    a = a.to(device)
+    with torch.no_grad():
+      b = model(a)
+
+    print('Done!')
